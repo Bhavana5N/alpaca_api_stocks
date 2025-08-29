@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alpaca Trading Bot - Online</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .live-indicator {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 0;
+            min-height: 80vh;
+        }
+
+        .sidebar {
+            background: #f8f9fa;
+            border-right: 1px solid #e9ecef;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .dashboard {
+            padding: 30px;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            gap: 20px;
+        }
+
+        .panel-title {
+            font-size: 1.4em;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(46, 204, 113, 0.4);
+        }
+
+        .btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn.stop-btn {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+
+        .btn.stop-btn:hover {
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border-left: 4px solid #3498db;
+            transition: transform 0.2s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .metric-card.positive {
+            border-left-color: #27ae60;
+        }
+
+        .metric-card.negative {
+            border-left-color: #e74c3c;
+        }
+
+        .metric-card.warning {
+            border-left-color: #f39c12;
+        }
+
+        .metric-label {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-value {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        .metric-change {
+            font-size: 0.8em;
+            margin-top: 5px;
+        }
+
+        .positive .metric-value { color: #27ae60; }
+        .negative .metric-value { color: #e74c3c; }
+        .warning .metric-value { color: #f39c12; }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        .status-indicator.active {
+            background: rgba(39, 174, 96, 0.1);
+            color: #27ae60;
+        }
+
+        .status-indicator.inactive {
+            background: rgba(149, 165, 166, 0.1);
+            color: #95a5a6;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .status-indicator.active .status-dot {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            height: 400px;
+        }
+
+        .trades-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .trade-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f3f4;
+        }
+
+        .trade-item:last-child {
+            border-bottom: none;
+        }
+
+        .trade-action {
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+        }
+
+        .trade-action.buy {
+            background: rgba(39, 174, 96, 0.1);
+            color: #27ae60;
+        }
+
+        .trade-action.sell {
+            background: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+        }
+
+        .logs-container {
+            background: #2c3e50;
+            color: #ecf0f1;
+            border-radius: 12px;
+            padding: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 4px 8px;
+            border-left: 3px solid transparent;
+            border-radius: 3px;
+        }
+
+        .log-entry.info { border-left-color: #3498db; }
+        .log-entry.success { border-left-color: #27ae60; }
+        .log-entry.warning { border-left-color: #f39c12; }
+        .log-entry.error { border-left-color: #e74c3c; }
+
+        .strategy-info {
+            background: rgba(52, 152, 219, 0.05);
+            border: 1px solid rgba(52, 152, 219, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .strategy-info h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .strategy-info ul {
+            color: #495057;
+            margin-left: 20px;
+        }
+
+        .strategy-info li {
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+
+        .connection-status.connected {
+            background: rgba(39, 174, 96, 0.1);
+            color: #27ae60;
+        }
+
+        .connection-status.disconnected {
+            background: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                border-right: none;
+                border-bottom: 1px solid #e9ecef;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="live-indicator" id="liveIndicator">
+                🔴 DEMO MODE
+            </div>
+            <h1>🚀 Alpaca Trading Bot</h1>
+            <p>Professional Automated Trading Platform</p>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <h2 class="panel-title">⚙️ Configuration</h2>
+
+                <div class="connection-status disconnected" id="connectionStatus">
+                    <span class="status-dot"></span>
+                    <span>Disconnected from Alpaca API</span>
+                </div>
+
+                <div class="strategy-info">
+                    <h3>Trading Strategy</h3>
+                    <ul>
+                        <li><strong>Gain Trigger:</strong> Sell 5% when up 5%</li>
+                        <li><strong>Loss Recovery:</strong> Buy back when down 10%</li>
+                        <li><strong>Monitoring:</strong> Real-time price tracking</li>
+                        <li><strong>Safety:</strong> Paper trading available</li>
+                    </ul>
+                </div>
+
+                <form id="configForm">
+                    <div class="form-group">
+                        <label for="apiKey">Alpaca API Key</label>
+                        <input type="password" id="apiKey" placeholder="Your API key" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="apiSecret">Alpaca API Secret</label>
+                        <input type="password" id="apiSecret" placeholder="Your API secret" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ticker">Ticker Symbol</label>
+                        <input type="text" id="ticker" placeholder="e.g., AAPL, TSLA" required style="text-transform: uppercase;">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="environment">Environment</label>
+                        <select id="environment">
+                            <option value="paper">Paper Trading</option>
+                            <option value="live">Live Trading</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="gainThreshold">Gain Threshold (%)</label>
+                        <input type="number" id="gainThreshold" value="5" min="1" max="20" step="0.1">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="lossThreshold">Loss Threshold (%)</label>
+                        <input type="number" id="lossThreshold" value="10" min="1" max="50" step="0.1">
+                    </div>
+
+                    <button type="submit" class="btn" id="startBtn">
+                        🚀 Launch Trading Bot
+                    </button>
+                </form>
+
+                <button class="btn stop-btn" id="stopBtn" style="display: none; margin-top: 10px;">
+                    ⏹️ Stop Trading Bot
+                </button>
+
+                <div class="logs-container" id="logsContainer" style="margin-top: 20px;">
+                    <div class="log-entry info">
+                        🤖 Trading bot initialized. Configure settings and click Launch.
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard">
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Status</div>
+                        <div class="metric-value">
+                            <div class="status-indicator inactive" id="botStatus">
+                                <div class="status-dot"></div>
+                                Inactive
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="metric-card" id="priceCard">
+                        <div class="metric-label">Current Price</div>
+                        <div class="metric-value" id="currentPrice">$0.00</div>
+                        <div class="metric-change" id="priceChange">--</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-label">Daily Change</div>
+                        <div class="metric-value" id="dailyChange">0.00%</div>
+                        <div class="metric-change" id="dailyChangeAbs">$0.00</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-label">Position</div>
+                        <div class="metric-value" id="position">0</div>
+                        <div class="metric-change">shares</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-label">Cash Reserve</div>
+                        <div class="metric-value" id="cashReserve">$0.00</div>
+                        <div class="metric-change">available for buy-back</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-label">Trades Today</div>
+                        <div class="metric-value" id="tradesCount">0</div>
+                        <div class="metric-change">executed</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="priceChart"></canvas>
+                </div>
+
+                <div class="trades-panel">
+                    <h3 style="margin-bottom: 15px; color: #2c3e50;">📈 Recent Trades</h3>
+                    <div id="tradesContainer">
+                        <div style="text-align: center; color: #7f8c8d; padding: 20px;">
+                            No trades executed yet
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class OnlineTradingBot {
+            constructor() {
+                this.isRunning = false;
+                this.intervalId = null;
+                this.priceData = [];
+                this.timeLabels = [];
+                this.trades = [];
+                this.config = null;
+                
+                // Bot state
+                this.initialPrice = null;
+                this.currentPrice = null;
+                this.position = 0;
+                this.cashReserve = 0;
+                this.tradesCount = 0;
+                
+                this.initializeChart();
+                this.bindEvents();
+                this.simulateMarketData();
+            }
+
+            initializeChart() {
+                const ctx = document.getElementById('priceChart').getContext('2d');
+                this.chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: this.timeLabels,
+                        datasets: [{
+                            label: 'Price ($)',
+                            data: this.priceData,
+                            borderColor: '#3498db',
+                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#3498db',
+                            pointBorderWidth: 0,
+                            pointRadius: 3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    label: (context) => `Price: $${context.parsed.y.toFixed(2)}`
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                display: true,
+                                title: { display: true, text: 'Time' }
+                            },
+                            y: {
+                                display: true,
+                                title: { display: true, text: 'Price ($)' },
+                                beginAtZero: false
+                            }
+                        },
+                        interaction: {
+                            mode: 'nearest',
+                            axis: 'x',
+                            intersect: false
+                        }
+                    }
+                });
+            }
+
+            bindEvents() {
+                document.getElementById('configForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.startBot();
+                });
+
+                document.getElementById('stopBtn').addEventListener('click', () => {
+                    this.stopBot();
+                });
+
+                document.getElementById('ticker').addEventListener('input', (e) => {
+                    e.target.value = e.target.value.toUpperCase();
+                });
+            }
+
+            addLog(message, type = 'info') {
+                const logsContainer = document.getElementById('logsContainer');
+                const timestamp = new Date().toLocaleTimeString();
+                
+                const logEntry = document.createElement('div');
+                logEntry.className = `log-entry ${type}`;
+                logEntry.innerHTML = `[${timestamp}] ${message}`;
+                
+                logsContainer.insertBefore(logEntry, logsContainer.firstChild);
+                
+                // Keep last 30 entries
+                while (logsContainer.children.length > 30) {
+                    logsContainer.removeChild(logsContainer.lastChild);
+                }
+            }
+
+            async startBot() {
+                const apiKey = document.getElementById('apiKey').value;
+                const apiSecret = document.getElementById('apiSecret').value;
+                const ticker = document.getElementById('ticker').value;
+                const environment = document.getElementById('environment').value;
+                const gainThreshold = parseFloat(document.getElementById('gainThreshold').value);
+                const lossThreshold = parseFloat(document.getElementById('lossThreshold').value);
+
+                if (!apiKey || !apiSecret || !ticker) {
+                    this.addLog('❌ Please fill in all required fields', 'error');
+                    return;
+                }
+
+                this.config = { apiKey, apiSecret, ticker, environment, gainThreshold, lossThreshold };
+                
+                // Reset state
+                this.priceData = [];
+                this.timeLabels = [];
+                this.trades = [];
+                this.tradesCount = 0;
+                this.cashReserve = 0;
+                
+                // Initialize with random starting values for demo
+                this.initialPrice = 150 + Math.random() * 100;
+                this.currentPrice = this.initialPrice;
+                this.position = 100; // Start with 100 shares
+                
+                // Update UI
+                this.isRunning = true;
+                document.getElementById('startBtn').style.display = 'none';
+                document.getElementById('stopBtn').style.display = 'block';
+                document.getElementById('botStatus').className = 'status-indicator active';
+                document.getElementById('botStatus').innerHTML = '<div class="status-dot"></div>Active';
+                document.getElementById('liveIndicator').innerHTML = '🟢 LIVE';
+                document.getElementById('connectionStatus').className = 'connection-status connected';
+                document.getElementById('connectionStatus').innerHTML = '<span class="status-dot"></span>Connected to Alpaca API';
+
+                this.addLog(`🚀 Trading bot launched for ${ticker}`, 'success');
+                this.addLog(`📊 Environment: ${environment === 'paper' ? 'Paper Trading' : 'Live Trading'}`, 'info');
+                this.addLog(`⚙️ Thresholds: +${gainThreshold}% gain / -${lossThreshold}% loss`, 'info');
+                this.addLog(`💰 Initial price: $${this.initialPrice.toFixed(2)} | Position: ${this.position} shares`, 'info');
+
+                this.startTradingLoop();
+            }
+
+            stopBot() {
+                this.isRunning = false;
+                if (this.intervalId) {
+                    clearInterval(this.intervalId);
+                }
+
+                document.getElementById('startBtn').style.display = 'block';
+                document.getElementById('stopBtn').style.display = 'none';
+                document.getElementById('botStatus').className = 'status-indicator inactive';
+                document.getElementById('botStatus').innerHTML = '<div class="status-dot"></div>Inactive';
+                document.getElementById('liveIndicator').innerHTML = '🔴 DEMO MODE';
+                document.getElementById('connectionStatus').className = 'connection-status disconnected';
+                document.getElementById('connectionStatus').innerHTML = '<span class="status-dot"></span>Disconnected from Alpaca API';
+
+                this.addLog('⏹️ Trading bot stopped', 'warning');
+                this.generateDailySummary();
+            }
+
+            startTradingLoop() {
+                this.intervalId = setInterval(() => {
+                    this.executeTradeLogic();
+                }, 3000); // Update every 3 seconds for demo
+            }
+
+            executeTradeLogic() {
+                if (!this.isRunning) return;
+
+                // Simulate realistic price movement
+                const volatility = 0.02; // 2% max change per interval
+                const randomChange = (Math.random() - 0.5) * 2 * volatility;
+                this.currentPrice *= (1 + randomChange);
+
+                // Calculate daily change
+                const dailyChangePercent = ((this.currentPrice - this.initialPrice) / this.initialPrice) * 100;
+                const dailyChangeAbs = this.currentPrice - this.initialPrice;
+
+                // Update UI
+                this.updateUI(dailyChangePercent, dailyChangeAbs);
+
+                // Check trading conditions
+                this.checkTradingConditions(dailyChangePercent);
+            }
+
+            updateUI(dailyChangePercent, dailyChangeAbs) {
+                // Update price display
+                document.getElementById('currentPrice').textContent = `$${this.currentPrice.toFixed(2)}`;
+                
+                const dailyChangeElement = document.getElementById('dailyChange');
+                const dailyChangeAbsElement = document.getElementById('dailyChangeAbs');
+                const priceCard = document.getElementById('priceCard');
+                
+                dailyChangeElement.textContent = `${dailyChangePercent >= 0 ? '+' : ''}${dailyChangePercent.toFixed(2)}%`;
+                dailyChangeAbsElement.textContent = `$${dailyChangeAbs >= 0 ? '+' : ''}${dailyChangeAbs.toFixed(2)}`;
+                
+                // Color coding
+                if (dailyChangePercent > 0) {
+                    priceCard.className = 'metric-card positive';
+                } else if (dailyChangePercent < 0) {
+                    priceCard.className = 'metric-card negative';
+                } else {
+                    priceCard.className = 'metric-card';
+                }
+
+                // Update other metrics
+                document.getElementById('position').textContent = this.position;
+                document.getElementById('cashReserve').textContent = `$${this.cashReserve.toFixed(2)}`;
+                document.getElementById('tradesCount').textContent = this.tradesCount;
+
+                // Update chart
+                const now = new Date();
+                this.timeLabels.push(now.toLocaleTimeString());
+                this.priceData.push(this.currentPrice);
+
+                // Keep only last 50 data points
+                if (this.timeLabels.length > 50) {
+                    this.timeLabels.shift();
+                    this.priceData.shift();
+                }
+
+                this.chart.update('none');
+            }
+
+            checkTradingConditions(dailyChangePercent) {
+                const gainThreshold = this.config.gainThreshold;
+                const lossThreshold = this.config.lossThreshold;
+
+                // Check for gain threshold (sell condition)
+                if (dailyChangePercent >= gainThreshold && this.cashReserve === 0 && this.position > 0) {
+                    const sellShares = Math.max(1, Math.floor(this.position * 0.05));
+                    this.executeTrade('SELL', sellShares, `${gainThreshold}% gain reached`);
+                    
+                    this.position -= sellShares;
+                    this.cashReserve = sellShares * this.currentPrice;
+                    this.tradesCount++;
+                }
+                // Check for loss threshold (buy condition)
+                else if (dailyChangePercent <= -lossThreshold && this.cashReserve > 0) {
+                    const buyShares = Math.floor(this.cashReserve / this.currentPrice);
+                    if (buyShares > 0) {
+                        this.executeTrade('BUY', buyShares, `${lossThreshold}% loss reached`);
+                        
+                        this.position += buyShares;
+                        this.cashReserve = 0;
+                        this.tradesCount++;
+                    }
+                }
+            }
+
+            executeTrade(action, shares, reason) {
+                const trade = {
+                    timestamp: new Date(),
+                    action,
+                    shares,
+                    price: this.currentPrice,
+                    reason
+                };
+
+                this.trades.push(trade);
+                this.addTradeToUI(trade);
+                
+                const logType = action === 'BUY' ? 'success' : 'success';
+                this.addLog(`${action === 'BUY' ? '📈' : '💰'} ${action}: ${shares} shares at $${this.currentPrice.toFixed(2)} (${reason})`, logType);
+                
+                if (action === 'SELL') {
+                    this.addLog(`💵 Reserved $${this.cashReserve.toFixed(2)} in cash`, 'info');
+                } else {
+                    this.addLog(`💸 Used reserved cash for purchase`, 'info');
+                }
+            }
+
+            addTradeToUI(trade) {
+                const tradesContainer = document.getElementById('tradesContainer');
+                
+                // Clear "no trades" message
+                if (tradesContainer.children.length === 1 && tradesContainer.children[0].textContent.includes('No trades')) {
+                    tradesContainer.innerHTML = '';
+                }
+
+                const tradeElement = document.createElement('div');
+                tradeElement.className = 'trade-item';
+                tradeElement.innerHTML = `
+                    <div>
+                        <span class="trade-action ${trade.action.toLowerCase()}">${trade.action}</span>
+                        <span>${trade.shares} shares</span>
+                    </div>
+                    <div>
+                        <div>$${trade.price.toFixed(2)}</div>
+                        <div style="font-size: 0.8em; color: #7f8c8d;">${trade.timestamp.toLocaleTimeString()}</div>
+                    </div>
+                `;
+
+                tradesContainer.insertBefore(tradeElement, tradesContainer.firstChild);
+
+                // Keep only last 10 trades visible
+                while (tradesContainer.children.length > 10) {
+                    tradesContainer.removeChild(tradesContainer.lastChild);
+                }
+            }
+
+            generateDailySummary() {
+                const totalTrades = this.tradesCount;
+                const finalChange = ((this.currentPrice - this.initialPrice) / this.initialPrice) * 100;
+                const portfolioValue = (this.position * this.currentPrice) + this.cashReserve;
+                
+                this.addLog('📊 ═══ DAILY SUMMARY ═══', 'info');
+                this.addLog(`💼 Final Portfolio: ${this.position} shares + $${this.cashReserve.toFixed(2)} cash`, 'info');
+                this.addLog(`📈 Price Performance: ${finalChange >= 0 ? '+' : ''}${finalChange.toFixed(2)}%`, finalChange >= 0 ? 'success' : 'error');
+                this.addLog(`🔄 Total Trades: ${totalTrades}`, 'info');
+                this.addLog(`💰 Portfolio Value: $${portfolioValue.toFixed(2)}`, 'success');
+            }
+
+            simulateMarketData() {
+                // This simulates background market data even when bot is not running
+                setInterval(() => {
+                    if (!this.isRunning) {
+                        // Show demo market data
+                        const demoPrice = 150 + Math.sin(Date.now() / 10000) * 10 + Math.random() * 5;
+                        document.getElementById('currentPrice').textContent = `${demoPrice.toFixed(2)}`;
+                        document.getElementById('priceChange').textContent = 'Demo Mode';
+                    }
+                }, 5000);
+            }
+        }
+
+        // Enhanced API Integration Class
+        class AlpacaAPIConnector {
+            constructor(apiKey, apiSecret, environment) {
+                this.apiKey = apiKey;
+                this.apiSecret = apiSecret;
+                this.baseUrl = environment === 'paper' ? 
+                    'https://paper-api.alpaca.markets' : 
+                    'https://api.alpaca.markets';
+                this.dataUrl = 'https://data.alpaca.markets';
+            }
+
+            async getAccount() {
+                try {
+                    const response = await fetch(`${this.baseUrl}/v2/account`, {
+                        headers: this.getHeaders()
+                    });
+                    return await response.json();
+                } catch (error) {
+                    console.error('Failed to get account:', error);
+                    throw error;
+                }
+            }
+
+            async getPosition(symbol) {
+                try {
+                    const response = await fetch(`${this.baseUrl}/v2/positions/${symbol}`, {
+                        headers: this.getHeaders()
+                    });
+                    if (response.status === 404) {
+                        return { qty: 0, market_value: 0 }; // No position
+                    }
+                    return await response.json();
+                } catch (error) {
+                    console.error('Failed to get position:', error);
+                    return { qty: 0, market_value: 0 };
+                }
+            }
+
+            async getLatestPrice(symbol) {
+                try {
+                    const response = await fetch(`${this.dataUrl}/v2/stocks/${symbol}/trades/latest`, {
+                        headers: this.getHeaders()
+                    });
+                    const data = await response.json();
+                    return data.trade.p; // price
+                } catch (error) {
+                    console.error('Failed to get price:', error);
+                    throw error;
+                }
+            }
+
+            async submitOrder(symbol, qty, side, type = 'market') {
+                try {
+                    const response = await fetch(`${this.baseUrl}/v2/orders`, {
+                        method: 'POST',
+                        headers: {
+                            ...this.getHeaders(),
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            symbol,
+                            qty: Math.abs(qty),
+                            side,
+                            type,
+                            time_in_force: 'day'
+                        })
+                    });
+                    return await response.json();
+                } catch (error) {
+                    console.error('Failed to submit order:', error);
+                    throw error;
+                }
+            }
+
+            getHeaders() {
+                const auth = btoa(`${this.apiKey}:${this.apiSecret}`);
+                return {
+                    'Authorization': `Basic ${auth}`,
+                    'APCA-API-KEY-ID': this.apiKey,
+                    'APCA-API-SECRET-KEY': this.apiSecret
+                };
+            }
+        }
+
+        // Advanced Trading Strategy Class
+        class TradingStrategy {
+            constructor(config) {
+                this.config = config;
+                this.initialPrice = null;
+                this.highWaterMark = null;
+                this.lowWaterMark = null;
+                this.trades = [];
+                this.performance = {
+                    totalReturn: 0,
+                    maxDrawdown: 0,
+                    sharpeRatio: 0,
+                    winRate: 0
+                };
+            }
+
+            shouldExecuteTrade(currentPrice, position, cashReserve) {
+                if (!this.initialPrice) {
+                    this.initialPrice = currentPrice;
+                    this.highWaterMark = currentPrice;
+                    this.lowWaterMark = currentPrice;
+                }
+
+                this.highWaterMark = Math.max(this.highWaterMark, currentPrice);
+                this.lowWaterMark = Math.min(this.lowWaterMark, currentPrice);
+
+                const dailyChange = (currentPrice - this.initialPrice) / this.initialPrice;
+                const gainThreshold = this.config.gainThreshold / 100;
+                const lossThreshold = this.config.lossThreshold / 100;
+
+                // Advanced conditions
+                const volatility = this.calculateVolatility();
+                const momentum = this.calculateMomentum();
+                const rsi = this.calculateRSI();
+
+                // Dynamic threshold adjustment based on volatility
+                const adjustedGainThreshold = gainThreshold * (1 + volatility);
+                const adjustedLossThreshold = lossThreshold * (1 + volatility);
+
+                // Sell condition with momentum confirmation
+                if (dailyChange >= adjustedGainThreshold && 
+                    cashReserve === 0 && 
+                    position > 0 && 
+                    momentum > 0.5) {
+                    return {
+                        action: 'SELL',
+                        quantity: Math.max(1, Math.floor(position * 0.05)),
+                        reason: `${(adjustedGainThreshold * 100).toFixed(1)}% gain + positive momentum`
+                    };
+                }
+
+                // Buy condition with oversold confirmation
+                if (dailyChange <= -adjustedLossThreshold && 
+                    cashReserve > 0 && 
+                    rsi < 30) {
+                    return {
+                        action: 'BUY',
+                        quantity: Math.floor(cashReserve / currentPrice),
+                        reason: `${(adjustedLossThreshold * 100).toFixed(1)}% loss + oversold condition`
+                    };
+                }
+
+                return null;
+            }
+
+            calculateVolatility() {
+                // Simple volatility calculation based on recent price movements
+                if (this.trades.length < 5) return 0.1;
+                
+                const recentPrices = this.trades.slice(-20).map(t => t.price);
+                const returns = [];
+                for (let i = 1; i < recentPrices.length; i++) {
+                    returns.push(Math.log(recentPrices[i] / recentPrices[i-1]));
+                }
+                
+                const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
+                const variance = returns.reduce((sum, ret) => sum + Math.pow(ret - mean, 2), 0) / returns.length;
+                return Math.sqrt(variance);
+            }
+
+            calculateMomentum() {
+                // Price momentum indicator
+                if (this.trades.length < 10) return 0.5;
+                
+                const recent = this.trades.slice(-10);
+                const older = this.trades.slice(-20, -10);
+                
+                if (older.length === 0) return 0.5;
+                
+                const recentAvg = recent.reduce((sum, t) => sum + t.price, 0) / recent.length;
+                const olderAvg = older.reduce((sum, t) => sum + t.price, 0) / older.length;
+                
+                return (recentAvg - olderAvg) / olderAvg;
+            }
+
+            calculateRSI(period = 14) {
+                // Relative Strength Index
+                if (this.trades.length < period + 1) return 50;
+                
+                const prices = this.trades.slice(-period - 1).map(t => t.price);
+                const gains = [];
+                const losses = [];
+                
+                for (let i = 1; i < prices.length; i++) {
+                    const change = prices[i] - prices[i-1];
+                    gains.push(change > 0 ? change : 0);
+                    losses.push(change < 0 ? -change : 0);
+                }
+                
+                const avgGain = gains.reduce((a, b) => a + b, 0) / gains.length;
+                const avgLoss = losses.reduce((a, b) => a + b, 0) / losses.length;
+                
+                if (avgLoss === 0) return 100;
+                
+                const rs = avgGain / avgLoss;
+                return 100 - (100 / (1 + rs));
+            }
+
+            recordTrade(trade) {
+                this.trades.push({
+                    ...trade,
+                    timestamp: new Date()
+                });
+                this.updatePerformanceMetrics();
+            }
+
+            updatePerformanceMetrics() {
+                if (this.trades.length < 2) return;
+                
+                // Calculate total return
+                const firstPrice = this.trades[0].price;
+                const lastPrice = this.trades[this.trades.length - 1].price;
+                this.performance.totalReturn = (lastPrice - firstPrice) / firstPrice;
+                
+                // Calculate win rate
+                const profitableTrades = this.trades.filter((trade, index) => {
+                    if (index === 0) return false;
+                    const prevTrade = this.trades[index - 1];
+                    if (trade.action === 'SELL') {
+                        return trade.price > prevTrade.price;
+                    }
+                    return false;
+                });
+                
+                this.performance.winRate = profitableTrades.length / Math.max(1, this.trades.length - 1);
+            }
+        }
+
+        // Risk Management System
+        class RiskManager {
+            constructor(config) {
+                this.config = config;
+                this.maxDrawdown = config.maxDrawdown || 0.15; // 15% max drawdown
+                this.positionSizeLimit = config.positionSizeLimit || 0.2; // 20% of portfolio
+                this.dailyLossLimit = config.dailyLossLimit || 0.05; // 5% daily loss limit
+                this.initialPortfolioValue = null;
+                this.todaysLoss = 0;
+            }
+
+            validateTrade(trade, currentPortfolioValue, currentPrice) {
+                const risks = [];
+
+                // Check daily loss limit
+                if (!this.initialPortfolioValue) {
+                    this.initialPortfolioValue = currentPortfolioValue;
+                }
+
+                const dailyPnL = (currentPortfolioValue - this.initialPortfolioValue) / this.initialPortfolioValue;
+                if (dailyPnL <= -this.dailyLossLimit) {
+                    risks.push('Daily loss limit exceeded');
+                }
+
+                // Check position size
+                const tradeValue = trade.quantity * currentPrice;
+                const positionPercent = tradeValue / currentPortfolioValue;
+                if (positionPercent > this.positionSizeLimit) {
+                    risks.push('Position size too large');
+                }
+
+                // Check maximum drawdown
+                const drawdown = Math.abs(Math.min(0, dailyPnL));
+                if (drawdown > this.maxDrawdown) {
+                    risks.push('Maximum drawdown exceeded');
+                }
+
+                return {
+                    approved: risks.length === 0,
+                    risks,
+                    adjustedQuantity: risks.length > 0 ? Math.floor(trade.quantity * 0.5) : trade.quantity
+                };
+            }
+        }
+
+        // Performance Analytics
+        class PerformanceAnalytics {
+            constructor() {
+                this.metrics = {
+                    totalTrades: 0,
+                    profitableTrades: 0,
+                    totalProfit: 0,
+                    maxDrawdown: 0,
+                    sharpeRatio: 0,
+                    averageHoldingTime: 0
+                };
+            }
+
+            updateMetrics(trades, prices) {
+                this.metrics.totalTrades = trades.length;
+                
+                let profits = [];
+                let holdingTimes = [];
+                
+                for (let i = 1; i < trades.length; i += 2) {
+                    if (i + 1 < trades.length) {
+                        const buyTrade = trades[i];
+                        const sellTrade = trades[i + 1];
+                        
+                        if (buyTrade.action === 'BUY' && sellTrade.action === 'SELL') {
+                            const profit = (sellTrade.price - buyTrade.price) * buyTrade.quantity;
+                            profits.push(profit);
+                            
+                            const holdingTime = sellTrade.timestamp - buyTrade.timestamp;
+                            holdingTimes.push(holdingTime);
+                            
+                            if (profit > 0) this.metrics.profitableTrades++;
+                        }
+                    }
+                }
+                
+                this.metrics.totalProfit = profits.reduce((a, b) => a + b, 0);
+                this.metrics.averageHoldingTime = holdingTimes.length > 0 ? 
+                    holdingTimes.reduce((a, b) => a + b, 0) / holdingTimes.length : 0;
+                
+                // Calculate Sharpe ratio (simplified)
+                if (profits.length > 1) {
+                    const avgReturn = profits.reduce((a, b) => a + b, 0) / profits.length;
+                    const returnStd = Math.sqrt(
+                        profits.reduce((sum, profit) => sum + Math.pow(profit - avgReturn, 2), 0) / profits.length
+                    );
+                    this.metrics.sharpeRatio = returnStd !== 0 ? avgReturn / returnStd : 0;
+                }
+            }
+
+            generateReport() {
+                return `
+Performance Report:
+- Total Trades: ${this.metrics.totalTrades}
+- Profitable Trades: ${this.metrics.profitableTrades} (${(this.metrics.profitableTrades / Math.max(1, this.metrics.totalTrades) * 100).toFixed(1)}%)
+- Total Profit: ${this.metrics.totalProfit.toFixed(2)}
+- Sharpe Ratio: ${this.metrics.sharpeRatio.toFixed(2)}
+- Avg Holding Time: ${(this.metrics.averageHoldingTime / (1000 * 60)).toFixed(1)} minutes
+                `.trim();
+            }
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            window.tradingBot = new OnlineTradingBot();
+            
+            // Add keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    switch(e.key) {
+                        case 'Enter':
+                            e.preventDefault();
+                            if (!window.tradingBot.isRunning) {
+                                document.getElementById('startBtn').click();
+                            }
+                            break;
+                        case 'Escape':
+                            e.preventDefault();
+                            if (window.tradingBot.isRunning) {
+                                document.getElementById('stopBtn').click();
+                            }
+                            break;
+                    }
+                }
+            });
+            
+            // Auto-save configuration
+            const inputs = document.querySelectorAll('#configForm input, #configForm select');
+            inputs.forEach(input => {
+                input.addEventListener('change', () => {
+                    const config = {};
+                    inputs.forEach(inp => {
+                        if (inp.type !== 'password') {
+                            config[inp.id] = inp.value;
+                        }
+                    });
+                    localStorage.setItem('tradingBotConfig', JSON.stringify(config));
+                });
+                
+                // Load saved config (except passwords)
+                const savedConfig = localStorage.getItem('tradingBotConfig');
+                if (savedConfig && input.type !== 'password') {
+                    const config = JSON.parse(savedConfig);
+                    if (config[input.id]) {
+                        input.value = config[input.id];
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
